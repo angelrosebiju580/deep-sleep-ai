@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="ml">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Parakunna Tharavinu GPS Tracker 🦆 (Totally Useless)</title>
+<style>
+  :root{
+    --bg:#071025; --card:#0b1220; --accent:#ffd86b; --muted:#9fb0d6;
+  }
+  *{box-sizing:border-box;font-family:Inter,Segoe UI,Arial,sans-serif}
+  body{margin:0;min-height:100vh;background:linear-gradient(180deg,#04122a,#071025);color:#e6eef8;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{width:980px;max-width:98%;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:12px;padding:14px;box-shadow:0 10px 40px rgba(2,6,23,0.7);display:grid;grid-template-columns:1fr 360px;gap:14px;align-items:start}
+  h1{margin:0;font-size:20px;display:flex;gap:10px;align-items:center}
+  .subtitle{color:var(--muted);font-size:13px;margin-top:6px}
+  #map{height:420px;background:linear-gradient(180deg,#06304a,#032233);border-radius:10px;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.03)}
+  .duck{position:absolute;font-size:44px;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 8px 18px rgba(0,0,0,0.6))}
+  .radar{position:absolute;right:10px;top:10px;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle at 30% 30%, rgba(100,255,200,0.06), transparent 40%);border:1px dashed rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px}
+  .panel{padding:10px;border-radius:8px;background:linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0.01));min-height:420px}
+  button{background:var(--accent);border:none;padding:8px 10px;border-radius:8px;color:#081020;font-weight:700;cursor:pointer;margin-top:8px}
+  .secondary{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.03)}
+  label{font-size:13px;color:var(--muted);display:block;margin-top:10px}
+  input, select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit}
+  #log{height:180px;overflow:auto;background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;margin-top:10px;font-size:13px;color:var(--muted)}
+  .tiny{font-size:12px;color:var(--muted)}
+  footer{grid-column:1/-1;text-align:center;color:var(--muted);font-size:12px;margin-top:8px}
+  .hud{position:absolute;left:10px;top:10px;background:rgba(0,0,0,0.25);padding:6px 8px;border-radius:8px;font-size:13px}
+  .coord{font-weight:700;color:#ffdca8}
+  .controls-row{display:flex;gap:8px;margin-top:8px}
+  @media(max-width:980px){.card{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div id="map" aria-label="Fake map / sky">
+      <div class="hud">
+        <div class="tiny">Lock:</div>
+        <div id="lockStatus">No target</div>
+      </div>
+      <div class="radar" id="radar">RADAR</div>
+      <div id="duck" class="duck" style="left:60px;top:260px;opacity:0">🦆</div>
+      <!-- some fake clouds -->
+      <svg style="position:absolute;left:20px;top:20px" width="160" height="60" opacity="0.06"><defs><filter id="g"><feGaussianBlur stdDeviation="6"/></filter></defs><g fill="#fff"><ellipse cx="30" cy="30" rx="30" ry="18" filter="url(#g)"/><ellipse cx="70" cy="25" rx="25" ry="14" filter="url(#g)"/></g></svg>
+    </div>
+
+    <div class="panel">
+      <h1>🛰️ Parakunna Tharavinu GPS Tracker</h1>
+      <div class="subtitle">Fake GPS tracker for a flying duck — demo & jokes only.</div>
+
+      <label>Start location (latitude, longitude) — fake coords</label>
+      <div style="display:flex;gap:8px">
+        <input id="lat" value="9.9312" />
+        <input id="lon" value="76.2673" />
+      </div>
+
+      <label>Flight mode</label>
+      <select id="mode">
+        <option value="casual">Casual (meandering)</option>
+        <option value="commute">Commute (direct)</option>
+        <option value="escape">Escape (fast zigzag)</option>
+        <option value="legendary">Legendary (mythic migration)</option>
+      </select>
+
+      <label>Speed slider (m/s) — fake</label>
+      <input type="range" id="speed" min="1" max="25" value="8"/>
+
+      <label>Destination (optional)</label>
+      <input id="dest" placeholder="eg: 9.94,76.28 (leave blank for roaming)"/>
+
+      <div class="controls-row">
+        <button id="startBtn">Start Tracking</button>
+        <button id="lockBtn" class="secondary">Lock Target</button>
+        <button id="snapBtn" class="secondary">Snapshot</button>
+      </div>
+
+      <div style="margin-top:10px">
+        <div class="tiny">Current (fake) coordinates:</div>
+        <div id="coords" class="coord">— , —</div>
+        <div class="tiny">ETA (if destination set): <span id="eta">—</span></div>
+      </div>
+
+      <div id="log" aria-live="polite"></div>
+
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="download" class="secondary">Download Log</button>
+        <button id="reset" class="secondary">Reset</button>
+      </div>
+
+      <footer>Totally useless. Bring snacks to the demo. 🦆</footer>
+    </div>
+  </div>
+
+<script>
+  // Fake GPS duck tracker
+  const duckEl = document.getElementById('duck');
+  const startBtn = document.getElementById('startBtn');
+  const lockBtn = document.getElementById('lockBtn');
+  const snapBtn = document.getElementById('snapBtn');
+  const download = document.getElementById('download');
+  const reset = document.getElementById('reset');
+  const radar = document.getElementById('radar');
+  const log = document.getElementById('log');
+  const coordsEl = document.getElementById('coords');
+  const etaEl = document.getElementById('eta');
+  const lockStatus = document.getElementById('lockStatus');
+
+  let animId = null;
+  let playing = false;
+  let path = [];
+  let idx = 0;
+  let targetLocked = false;
+  let logs = [];
+
+  function appendLog(text){
+    const t = new Date().toLocaleTimeString();
+    logs.unshift(`[${t}] ${text}`);
+    renderLog();
+  }
+  function renderLog(){
+    log.innerHTML = logs.slice(0,60).map(l => `<div>${l}</div>`).join('');
+  }
+
+  function parseLatLon(s){
+    if(!s) return null;
+    const parts = s.split(',').map(x=>x.trim());
+    if(parts.length<2) return null;
+    const lat = parseFloat(parts[0]), lon = parseFloat(parts[1]);
+    if(isNaN(lat)||isNaN(lon)) return null;
+    return {lat,lon};
+  }
+
+  function randomOffset(scale=0.002){ return (Math.random()*2-1)*scale; }
+
+  function buildPath(){
+    path = [];
+    const start = {lat: parseFloat(document.getElementById('lat').value)||9.9312,
+                   lon: parseFloat(document.getElementById('lon').value)||76.2673};
+    const mode = document.getElementById('mode').value;
+    const sp = parseFloat(document.getElementById('speed').value)||6;
+    const destInput = document.getElementById('dest').value.trim();
+    const dest = parseLatLon(destInput);
+
+    const steps = 200;
+    if(dest){
+      // direct-ish path + little noise depending on mode
+      for(let i=0;i<=steps;i++){
+        const t = i/steps;
+        const wobble = mode==='commute'?0.0002:(mode==='escape'?0.001:0.0006);
+        const lat = start.lat + (dest.lat - start.lat) * t + randomOffset(wobble)*(1-t);
+        const lon = start.lon + (dest.lon - start.lon) * t + randomOffset(wobble)*(1-t);
+        path.push({lat,lon});
+      }
+    } else {
+      // roaming random walk
+      let cur = {...start};
+      for(let i=0;i<steps;i++){
+        const stepSize = (mode==='legendary')?0.015: (mode==='escape')?0.008 : (mode==='commute')?0.004:0.0025;
+        cur = {lat: cur.lat + randomOffset(stepSize), lon: cur.lon + randomOffset(stepSize)};
+        path.push({...cur});
+      }
+    }
+    appendLog(`Path built: ${path.length} points | mode=${document.getElementById('mode').value} | speed=${sp} m/s`);
+  }
+
+  function metersToPixels(m){
+    // arbitrary scale for demo
+    return Math.min(720, 8 * m);
+  }
+
+  function moveDuck(){
+    if(idx>=path.length){ stop(); appendLog('Duck stopped (end of path).'); return; }
+    const p = path[idx];
+    // map lat/lon to map pixels (very fake linear mapping)
+    // base origin from initial inputs
+    const baseLat = parseFloat(document.getElementById('lat').value)||9.9312;
+    const baseLon = parseFloat(document.getElementById('lon').value)||76.2673;
+    const dx = (p.lon - baseLon) * 20000; // scale fudge
+    const dy = (p.lat - baseLat) * -20000;
+    const cx = 120 + dx; const cy = 220 + dy;
+    duckEl.style.left = Math.max(20, Math.min(920, cx)) + 'px';
+    duckEl.style.top = Math.max(20, Math.min(400, cy)) + 'px';
+    duckEl.style.opacity = 1;
+    coordsEl.textContent = `${p.lat.toFixed(5)} , ${p.lon.toFixed(5)}`;
+    // radar ping effect
+    radar.style.transform = `scale(${1 + 0.04*Math.sin(idx/3)})`;
+    // possible target lock behavior
+    if(targetLocked && idx % 8 === 0){
+      appendLog(`LOCK PING — target RSSI approx ${Math.round(40+Math.random()*40)}%`);
+    }
+    idx++;
+    animId = requestAnimationFrame(moveDuck);
+  }
+
+  function start(){
+    if(playing) return;
+    buildPath();
+    idx = 0;
+    playing = true;
+    targetLocked = false;
+    lockStatus.textContent = 'No target';
+    appendLog('Tracking started.');
+    animId = requestAnimationFrame(moveDuck);
+  }
+
+  function stop(){
+    if(animId) cancelAnimationFrame(animId);
+    animId = null;
+    playing = false;
+  }
+
+  startBtn.addEventListener('click', ()=>{
+    if(playing){ stop(); startBtn.textContent='Start Tracking'; appendLog('Tracking paused.'); }
+    else { start(); startBtn.textContent='Stop Tracking'; }
+  });
+
+  lockBtn.addEventListener('click', ()=>{
+    targetLocked = !targetLocked;
+    lockStatus.textContent = targetLocked ? 'Locked on target 🔒' : 'No target';
+    appendLog(targetLocked? 'Target locked.' : 'Target unlocked.');
+  });
+
+  snapBtn.addEventListener('click', ()=>{
+    appendLog('Snapshot taken: ' + coordsEl.textContent);
+    // little flash animation
+    const flash = document.createElement('div'); flash.style.position='absolute'; flash.style.left='0'; flash.style.top='0';
+    flash.style.width='100%'; flash.style.height='100%'; flash.style.background='rgba(255,255,255,0.04)';
+    document.getElementById('map').appendChild(flash);
+    setTimeout(()=> flash.remove(), 120);
+  });
+
+  download.addEventListener('click', ()=>{
+    const blob = new Blob([logs.join('\n')], {type:'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'duck_log.txt'; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  reset.addEventListener('click', ()=>{
+    stop();
+    duckEl.style.opacity = 0;
+    logs = []; renderLog();
+    coordsEl.textContent = '— , —';
+    etaEl.textContent = '—';
+    startBtn.textContent = 'Start Tracking';
+    lockStatus.textContent = 'No target';
+    appendLog('Reset complete.');
+  });
+
+  // initial demo path so it looks alive
+  (()=>{
+    document.getElementById('lat').value = 9.9312;
+    document.getElementById('lon').value = 76.2673;
+    appendLog('Ready. Set start coords and press Start Tracking.');
+  })();
+</script>
+</body>
+</html>

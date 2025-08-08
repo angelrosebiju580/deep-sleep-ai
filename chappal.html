@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Chappal Distance Calculator (Useless Project)</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --accent:#ffb86b; --muted:#98a8c7;
+  }
+  *{box-sizing:border-box;font-family:Inter,Segoe UI,Arial,sans-serif}
+  body{margin:0;min-height:100vh;background:linear-gradient(180deg,#071025, #0f1724);color:#e6eef8;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{width:920px;max-width:96%;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:14px;padding:18px;box-shadow:0 8px 30px rgba(2,6,23,0.7);display:grid;grid-template-columns:1fr 420px;gap:18px;align-items:start}
+  h1{margin:0;font-size:20px;display:flex;gap:10px;align-items:center}
+  .subtitle{color:var(--muted);font-size:13px;margin-top:6px}
+  .controls{padding:12px;border-radius:10px;background:rgba(255,255,255,0.02);margin-top:12px}
+  label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+  input[type=range]{width:100%}
+  select,input[type=number]{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:inherit}
+  button{background:var(--accent);border:none;padding:10px 12px;border-radius:10px;color:#081020;font-weight:700;cursor:pointer;margin-top:10px}
+  button.secondary{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.03)}
+  .right{padding:12px;border-radius:10px;background:linear-gradient(90deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01))}
+  #playfield{height:300px;background:linear-gradient(180deg,#071433,#061022);border-radius:10px;position:relative;overflow:hidden;display:flex;align-items:flex-end;justify-content:flex-start;padding:20px}
+  .ground{position:absolute;left:0;right:0;bottom:0;height:36px;background:linear-gradient(90deg,#053047,#03202b);box-shadow:inset 0 6px 18px rgba(0,0,0,0.6)}
+  .chappal{position:absolute;font-size:44px;transform:translate(-50%,-50%);pointer-events:none;filter:drop-shadow(0 8px 12px rgba(0,0,0,0.6))}
+  #resultBox{font-weight:700;font-size:18px;margin-top:8px;color:#ffdca8}
+  .log{height:120px;overflow:auto;background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;margin-top:10px;font-size:13px;color:var(--muted)}
+  footer{grid-column:1/-1;text-align:center;color:var(--muted);font-size:12px;margin-top:12px}
+  .tiny{font-size:12px;color:var(--muted)}
+  .badge{background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:8px;font-weight:600;display:inline-block}
+  .meter{height:12px;background:rgba(255,255,255,0.03);border-radius:8px;overflow:hidden;margin-top:6px}
+  .meter > i{display:block;height:100%;background:linear-gradient(90deg,#ffe39f,#ffb86b);width:100%}
+  .col{gap:8px;display:flex;flex-direction:column}
+  .row{display:flex;gap:8px}
+  @media(max-width:980px){.card{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+  <div class="card" role="main" aria-label="Useless chappal calculator">
+    <div>
+      <h1>🩴 Chappal Distance Calculator <span class="badge tiny">Totally Useless</span></h1>
+      <div class="subtitle">Enter totally serious parameters. The output is not scientifically valid — but dramatic.</div>
+
+      <div class="controls" aria-hidden="false">
+        <label>Mother's Mood</label>
+        <select id="mood">
+          <option value="calm">Calm (rare)</option>
+          <option value="irked" selected>Irked (likely)</option>
+          <option value="angry">Angry (dangerous)</option>
+          <option value="legendary">Legendary (mythical)</option>
+        </select>
+
+        <label>Throw Strength <span class="tiny"> (0 = gentle flick, 10 = nuclear chappal)</span></label>
+        <input id="strength" type="range" min="0" max="10" value="6" />
+
+        <label>Wind Level</label>
+        <input id="wind" type="range" min="0" max="10" value="1" />
+
+        <label>Number of Past Offenses</label>
+        <input id="offenses" type="number" min="0" max="50" value="3" />
+
+        <div class="row">
+          <button id="throwBtn">Throw Chappal!</button>
+          <button id="resetBtn" class="secondary">Reset</button>
+        </div>
+
+        <div id="resultBox" aria-live="polite">Awaiting the sacred launch...</div>
+        <div class="tiny">Pro tip: put on a helmet before demoing.</div>
+
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="tiny">Useless IQ</div>
+          <div class="meter" title="Useless IQ bar"><i id="iqbar" style="width:95%"></i></div>
+          <div class="tiny" style="margin-top:6px">Distance Confidence: <span id="conf">95%</span></div>
+        </div>
+        <div style="text-align:right">
+          <div class="tiny">Last result</div>
+          <div id="last" style="font-weight:800;font-size:20px;color:#ffdca8">—</div>
+        </div>
+      </div>
+
+      <div id="playfield" role="img" aria-label="Chappal throw animation">
+        <div class="ground"></div>
+        <!-- chappal element (emoji) -->
+        <div id="chappal" class="chappal" style="left:40px;bottom:44px;opacity:0">🩴</div>
+      </div>
+
+      <div style="margin-top:8px" class="tiny">Logs (absurd):</div>
+      <div class="log" id="playlog"></div>
+    </div>
+
+    <footer>
+      Created for the noble cause of uselessness. Save this file as <code>index.html</code> and open it. No libraries required.
+    </footer>
+  </div>
+
+<script>
+  // Useless physics-like formula and animation
+  const moodMultiplier = { calm: 0.6, irked: 1.0, angry: 1.6, legendary: 3.2 };
+
+  const throwBtn = document.getElementById('throwBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const mood = document.getElementById('mood');
+  const strength = document.getElementById('strength');
+  const wind = document.getElementById('wind');
+  const offenses = document.getElementById('offenses');
+  const resultBox = document.getElementById('resultBox');
+  const log = document.getElementById('log');
+  const playlog = document.getElementById('playlog');
+  const chappal = document.getElementById('chappal');
+  const playfield = document.getElementById('playfield');
+  const last = document.getElementById('last');
+  const conf = document.getElementById('conf');
+  const iqbar = document.getElementById('iqbar');
+
+  // Add playful phrases
+  const flavour = [
+    "Calculated with grandma-level precision.",
+    "We consulted three neighbours and a dog.",
+    "Applied the ancient Chappal Theorem (patent pending).",
+    "Excluded physics for dramatic effect.",
+    "Adjusted for dramatic lighting."
+  ];
+
+  function randomInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+
+  function computeDistance(){
+    // Totally fake formula: base from strength * mood * (offenses multiplier) + wind randomness
+    const s = Number(strength.value);
+    const m = moodMultiplier[mood.value] || 1;
+    const o = Math.log(Number(offenses.value)+1) + 1; // past offenses slightly increase force (sarcastic)
+    const w = Number(wind.value);
+
+    // Add deterministic + chaotic terms
+    const base = s * m * (5 + o);
+    const chaos = (Math.random() - 0.2) * (3 + w); // randomness increases with wind
+    // Completely absurd bias: if offspring left sock unwashed => +7m
+    const sockBias = (Math.random() < 0.15) ? 7 : 0;
+
+    // "Scientific" distance in meters (rounded to 1 dp)
+    let distance = Math.max(0.1, base + chaos + sockBias);
+    // Useless correction: small chance of legendary slip that doubles distance
+    if(Math.random() < (mood.value === 'legendary' ? 0.5 : 0.03)){
+      distance *= (2 + Math.random()*3);
+      playlog.prepend(`[GOD MODE] The chappal achieved mythic velocity!`);
+    }
+
+    // convert to show in meters with funny units occasionally
+    const display = Math.round(distance*10)/10;
+    const confPct = Math.max(5, Math.round(100 - Math.abs(5 - s) * 6 + (Math.random()*10 - o)));
+    return {distance:display, conf:confPct, raw:distance};
+  }
+
+  // Animate chappal along a parabolic arc (fake)
+  function animateChappal(distMeters, callback){
+    // Convert meters to pixels roughly depending on playfield width
+    const width = playfield.clientWidth - 80; // leave margins
+    const pixelDist = Math.m
